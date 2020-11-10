@@ -4,27 +4,67 @@
 
 - [`offline_imu_cam`][5]: Reads IMU data and images from files on disk, emulating a real sensor on the
   headset (feeds input measurements with timing similar to an actual IMU).
+	- Published Topics:
+		- publishes `imu_cam_type` on `imu_cam` topic
 
 - [`ground_truth_slam`][6]: Reads the ground-truth from the same dataset to compare our output against
   (uses timing from `offline_imu_cam`).
+	- Published Topics:
+		- publishes `pose_type` on `true_pose` topic
+	- Subscried Topics:
+		- receives `imu_cam_type` on `imu_cam` topic		
 
 - [`kimera_vio`][13]: Runs Kimera-VIO ([upstream][1]) on the input, and outputs the headset's pose. In practice, this
   publishes a fairly slow pose, so IMU integration and pose prediction is required to infer a fast pose.
+	- Published Topics:
+		- publishes `pose_type` on `slow_pose` topic
+		- publishes `imu_integrator_input` on `imu_integrator_input` topic
+	- Subscried Topics:
+		- receives `imu_cam_type` on `imu_cam` topic		
 
 - [`gtsam_integrator`][15]: Integrates over all IMU samples since the last published SLAM pose to provide a fast-pose everytime a new IMU sample.
   arrives using the GTSAM library ([upstream][14]). 
-
+	- Published Topics:
+		- publishes `imu_raw_type` on `imu_raw` topic
+	- Subscried Topics:
+		- receives `imu_cam_type` on `imu_cam` topic
+		- receives `imu_integrator_seq` on `imu_integrator_seq` topic
+		- receives `imu_integrator_input` on `imu_integrator_input` topic
+		
 - [`pose_prediction`][18]: Uses the latest IMU value to predict a pose for a future point in time.
+	- Subscried Topics:
+		- receives `pose_type` on `slow_pose` topic
+		- receives `imu_raw` on `imu_raw` topic
+		- receives `pose_type` on `true_pose` topic
+		- receives `time_type` on `vsync_estimate` topic
 
 - [`gldemo`][8]: Renders a static scene (into left and right eyebuffers) given the pose from `pose_prediction`.
+	- Published Topics:
+		- publishes `rendered_frame` on `eyebuffer` topic
+	- Subscried Topics:
+		- receives `time_type` on `vsync_estimate` topic
 
 - [`timewarp_gl`][9]: [Asynchronous reprojection][2] of the eyebuffers.
+	- Published Topics:
+		- publishes `hologram_input` on `hologram_in` topic
+		- publishes `time_type` on `vsync_estimate` topic
+		- publishes `std::chrono::duration<double, std::nano>` on `mtp` topic
+		- publishes `std::chrono::duration<double, std::nano>` on `warp_frame_age` topic
+	- Subscried Topics:
+		- receives `rendered_frame` on `eyebuffer` topic
 
 - [`debugview`][10]: Renders a frame for debug information.
+	- Subscried Topics:
+		- receives `pose_type` on `slow_pose` topic
+		- receives `imu_raw` on `imu_raw` topic
 
 - [`audio`][11]: TODO: this. By default this is disabled, since it requires an NVIDIA GPU.
+	- Published Topics:
+		- TODO
 
 - [`hologram`][12]: TODO: this. By default this is disabled, since it requires an NVIDIA GPU.
+	- Published Topics:
+		- TODO
 
 Below this point, we will use Switchboard terminology. Read the [API documentation on `switchboard`][3] for definitions.
 
